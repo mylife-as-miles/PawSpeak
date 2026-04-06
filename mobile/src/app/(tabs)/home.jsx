@@ -796,11 +796,41 @@ export default function HomeScreen() {
               alignItems: "center",
             }}
           >
-            <Text
+            <View
+              style={{
+                position: "relative",
+                justifyContent: "center",
+              }}
+            >
+              <View
+                pointerEvents="none"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  width: 24,
+                  height: 24,
+                  borderRadius: 999,
+                  backgroundColor: theme.bg,
+                  zIndex: 1,
+                }}
+              />
+              <Image
+                source={{ uri: HEADER_ICON_URL }}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  width: 18,
+                  height: 18,
+                  zIndex: 2,
+                }}
+                contentFit="contain"
+              />
+              <Text
               style={{ fontSize: 22, fontWeight: "800", color: theme.text1 }}
             >
               🐾 PawSpeak
             </Text>
+            </View>
             <TouchableOpacity
               onPress={toggleTheme}
               style={{
@@ -1441,7 +1471,7 @@ export default function HomeScreen() {
                     marginBottom: 6,
                   }}
                 >
-                  Share the cat reply
+                  Share the cat translate
                 </Text>
                 <Text
                   style={{
