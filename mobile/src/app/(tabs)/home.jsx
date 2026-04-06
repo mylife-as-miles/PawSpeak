@@ -1,8 +1,10 @@
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
+import appFetch from "@/__create/fetch";
 import { listFavorites, saveFavorite } from "@/utils/pawspeakStorage";
 import useUpload from "@/utils/useUpload";
 import { useAppTheme } from "@/utils/themeStore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Clipboard from "expo-clipboard";
 import {
   createAudioPlayer,
   RecordingPresets,
@@ -15,14 +17,17 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Alert,
+  Easing,
+  Modal,
+  Pressable,
   ScrollView,
   Share,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -36,7 +41,17 @@ import {
   Waves,
 } from "lucide-react-native";
 
-function formatShareText(result) {
+const DEFAULT_VISUALIZER_LEVELS = [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1];
+const SHARE_PREVIEW_LEVELS = [1, 2, 4, 5, 7, 9, 7, 5, 4, 2, 1];
+const LIKE_PARTICLES = [
+  { x: -34, y: -34, size: 10, color: "#FFB84D" },
+  { x: -18, y: -58, size: 8, color: "#FFD27D" },
+  { x: 0, y: -66, size: 12, color: "#FF8C00" },
+  { x: 18, y: -56, size: 8, color: "#FFC36B" },
+  { x: 34, y: -34, size: 10, color: "#FF9D2E" },
+];
+
+function legacyFormatShareText(result) {
   return [
     "PawSpeak 🐾",
     `Human: ${result.humanText}`,
@@ -44,6 +59,17 @@ function formatShareText(result) {
     `Cat: ${result.catPhrase}`,
     `${result.interpretation}`,
   ].join("\n");
+}
+
+function formatShareText(result) {
+  const lines = [
+    "PawSpeak",
+    result?.humanText ? `You said: ${result.humanText}` : null,
+    result?.catPhrase ? `Cat reply: "${result.catPhrase}"` : null,
+    "Shared from PawSpeak.",
+  ];
+
+  return lines.filter(Boolean).join("\n");
 }
 
 export default function HomeScreen() {
@@ -72,12 +98,27 @@ export default function HomeScreen() {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
   const playerRef = useRef(null);
+  const playerStatusSubscriptionRef = useRef(null);
+  const playerSampleSubscriptionRef = useRef(null);
+  const visualizerFallbackRef = useRef(null);
   const [upload, { loading: uploadLoading }] = useUpload();
   const [message, setMessage] = useState("");
   const [latestResult, setLatestResult] = useState(null);
   const [error, setError] = useState(null);
   const [info, setInfo] = useState("");
   const [hasMicPermission, setHasMicPermission] = useState(false);
+  const [visualizerLevels, setVisualizerLevels] = useState(
+    DEFAULT_VISUALIZER_LEVELS,
+  );
+  const [isVisualizerActive, setIsVisualizerActive] = useState(false);
+  const [isShareCardVisible, setIsShareCardVisible] = useState(false);
+  const shareSheetOpacity = useRef(new Animated.Value(0)).current;
+  const shareSheetTranslateY = useRef(new Animated.Value(44)).current;
+  const shareBackdropOpacity = useRef(new Animated.Value(0)).current;
+  const likeButtonScale = useRef(new Animated.Value(1)).current;
+  const likeBurstProgress = useRef(new Animated.Value(0)).current;
+  const likeBadgeOpacity = useRef(new Animated.Value(0)).current;
+  const likeBadgeTranslateY = useRef(new Animated.Value(10)).current;
 
   const favoritesQuery = useQuery({
     queryKey: ["pawspeak-favorites"],
@@ -94,6 +135,194 @@ export default function HomeScreen() {
     return favorites.some((favorite) => favorite.id === latestResult.id);
   }, [favorites, latestResult]);
 
+  const stopVisualizerFallback = useCallback(() => {
+    if (visualizerFallbackRef.current) {
+      clearInterval(visualizerFallbackRef.current);
+      visualizerFallbackRef.current = null;
+    }
+  }, []);
+
+  const resetVisualizer = useCallback(() => {
+    stopVisualizerFallback();
+    setIsVisualizerActive(false);
+    setVisualizerLevels(DEFAULT_VISUALIZER_LEVELS);
+  }, [stopVisualizerFallback]);
+
+  const clearPlayerSubscriptions = useCallback(() => {
+    if (playerStatusSubscriptionRef.current?.remove) {
+      playerStatusSubscriptionRef.current.remove();
+    }
+
+    if (playerSampleSubscriptionRef.current?.remove) {
+      playerSampleSubscriptionRef.current.remove();
+    }
+
+    playerStatusSubscriptionRef.current = null;
+    playerSampleSubscriptionRef.current = null;
+  }, []);
+
+  const updateVisualizerFromSample = useCallback(
+    (sample) => {
+      const frames = sample?.channels?.[0]?.frames;
+
+      if (!frames?.length) {
+        return;
+      }
+
+      stopVisualizerFallback();
+      setIsVisualizerActive(true);
+
+      const bucketSize = Math.max(
+        1,
+        Math.floor(frames.length / DEFAULT_VISUALIZER_LEVELS.length),
+      );
+
+      const nextLevels = DEFAULT_VISUALIZER_LEVELS.map((_, index) => {
+        const start = index * bucketSize;
+        const end =
+          index === DEFAULT_VISUALIZER_LEVELS.length - 1
+            ? frames.length
+            : start + bucketSize;
+        const slice = Array.from(frames.slice(start, end));
+
+        if (!slice.length) {
+          return 1;
+        }
+
+        const averageAmplitude =
+          slice.reduce((sum, value) => sum + Math.abs(value), 0) / slice.length;
+        const amplified = Math.min(1, averageAmplitude * 18);
+        return Math.max(1, Math.min(9, Math.round(1 + amplified * 8)));
+      });
+
+      setVisualizerLevels(nextLevels);
+    },
+    [stopVisualizerFallback],
+  );
+
+  const startVisualizerFallback = useCallback(() => {
+    stopVisualizerFallback();
+    setIsVisualizerActive(true);
+
+    let tick = 0;
+    visualizerFallbackRef.current = setInterval(() => {
+      tick += 1;
+
+      setVisualizerLevels((currentLevels) =>
+        currentLevels.map((_, index) => {
+          const wave = Math.sin(tick * 0.65 + index * 0.8);
+          const shimmer = Math.cos(tick * 0.45 + index * 0.55);
+          const nextValue = Math.round(
+            4 + wave * 2.2 + shimmer * 1.2 + (index === 6 ? 1.2 : 0),
+          );
+
+          return Math.max(1, Math.min(9, nextValue));
+        }),
+      );
+    }, 90);
+  }, [stopVisualizerFallback]);
+
+  const disposeCurrentPlayer = useCallback(() => {
+    clearPlayerSubscriptions();
+    resetVisualizer();
+
+    if (playerRef.current) {
+      try {
+        playerRef.current.pause();
+      } catch (pauseError) {
+        console.error(pauseError);
+      }
+
+      try {
+        playerRef.current.remove();
+      } catch (removeError) {
+        console.error(removeError);
+      }
+
+      playerRef.current = null;
+    }
+  }, [clearPlayerSubscriptions, resetVisualizer]);
+
+  const triggerLikeCelebration = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
+    likeButtonScale.stopAnimation();
+    likeBurstProgress.stopAnimation();
+    likeBadgeOpacity.stopAnimation();
+    likeBadgeTranslateY.stopAnimation();
+
+    likeButtonScale.setValue(1);
+    likeBurstProgress.setValue(0);
+    likeBadgeOpacity.setValue(0);
+    likeBadgeTranslateY.setValue(10);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.spring(likeButtonScale, {
+          toValue: 1.18,
+          friction: 5,
+          tension: 220,
+          useNativeDriver: true,
+        }),
+        Animated.spring(likeButtonScale, {
+          toValue: 1,
+          friction: 7,
+          tension: 180,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(likeBurstProgress, {
+          toValue: 1,
+          duration: 620,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(likeBurstProgress, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(likeBadgeOpacity, {
+            toValue: 1,
+            duration: 160,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(likeBadgeTranslateY, {
+            toValue: -18,
+            duration: 280,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.delay(380),
+        Animated.parallel([
+          Animated.timing(likeBadgeOpacity, {
+            toValue: 0,
+            duration: 180,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(likeBadgeTranslateY, {
+            toValue: -28,
+            duration: 180,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+    ]).start();
+  }, [
+    likeBadgeOpacity,
+    likeBadgeTranslateY,
+    likeBurstProgress,
+    likeButtonScale,
+  ]);
+
   useEffect(() => {
     async function prepare() {
       const permission = await requestRecordingPermissionsAsync();
@@ -105,16 +334,23 @@ export default function HomeScreen() {
 
   useEffect(() => {
     return () => {
+      clearPlayerSubscriptions();
+      stopVisualizerFallback();
+
       if (playerRef.current) {
-        playerRef.current.pause();
-        playerRef.current.remove();
+        try {
+          playerRef.current.pause();
+          playerRef.current.remove();
+        } catch (cleanupError) {
+          console.error(cleanupError);
+        }
       }
     };
-  }, []);
+  }, [clearPlayerSubscriptions, stopVisualizerFallback]);
 
   const translateMutation = useMutation({
     mutationFn: async (inputText) => {
-      const response = await fetch("/api/pawspeak/translate", {
+      const response = await appFetch("/api/pawspeak/translate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -157,7 +393,7 @@ export default function HomeScreen() {
 
   const speakMutation = useMutation({
     mutationFn: async (text) => {
-      const response = await fetch("/api/pawspeak/speak", {
+      const response = await appFetch("/api/pawspeak/speak", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -180,7 +416,7 @@ export default function HomeScreen() {
 
   const transcribeMutation = useMutation({
     mutationFn: async (audioUrl) => {
-      const response = await fetch("/api/pawspeak/transcribe", {
+      const response = await appFetch("/api/pawspeak/transcribe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -237,22 +473,60 @@ export default function HomeScreen() {
     await Haptics.selectionAsync();
   }, []);
 
-  const playAudio = useCallback((audioUrl) => {
-    try {
-      if (playerRef.current) {
-        playerRef.current.pause();
-        playerRef.current.remove();
-      }
+  const playAudio = useCallback(
+    (audioUrl) => {
+      try {
+        disposeCurrentPlayer();
 
-      const player = createAudioPlayer(audioUrl);
-      playerRef.current = player;
-      player.play();
-      setInfo("Playing cat audio...");
-    } catch (playerError) {
-      console.error(playerError);
-      setError("Could not play the audio.");
-    }
-  }, []);
+        const player = createAudioPlayer(audioUrl);
+        playerRef.current = player;
+
+        startVisualizerFallback();
+
+        if (player.isAudioSamplingSupported) {
+          player.setAudioSamplingEnabled(true);
+          playerSampleSubscriptionRef.current = player.addListener(
+            "audioSampleUpdate",
+            updateVisualizerFromSample,
+          );
+        }
+
+        playerStatusSubscriptionRef.current = player.addListener(
+          "playbackStatusUpdate",
+          (status) => {
+            const isPlaying = Boolean(status?.playing);
+            const reachedEnd =
+              typeof status?.duration === "number" &&
+              typeof status?.currentTime === "number" &&
+              status.duration > 0 &&
+              status.currentTime >= status.duration - 0.05;
+
+            if (isPlaying) {
+              setIsVisualizerActive(true);
+              return;
+            }
+
+            if (status?.paused || reachedEnd) {
+              resetVisualizer();
+            }
+          },
+        );
+
+        player.play();
+        setInfo("Playing cat audio...");
+      } catch (playerError) {
+        console.error(playerError);
+        resetVisualizer();
+        setError("Could not play the audio.");
+      }
+    },
+    [
+      disposeCurrentPlayer,
+      resetVisualizer,
+      startVisualizerFallback,
+      updateVisualizerFromSample,
+    ],
+  );
 
   const handleHearResult = useCallback(async () => {
     if (!latestResult) {
@@ -295,15 +569,102 @@ export default function HomeScreen() {
       return;
     }
 
+    triggerLikeCelebration();
+
     if (currentIsSaved) {
       setInfo("Already in Favorites.");
       return;
     }
 
     saveMutation.mutate(latestResult);
-  }, [currentIsSaved, latestResult, saveMutation]);
+  }, [currentIsSaved, latestResult, saveMutation, triggerLikeCelebration]);
 
-  const handleShare = useCallback(async () => {
+  const openShareCard = useCallback(async () => {
+    if (!latestResult) {
+      return;
+    }
+
+    await Haptics.selectionAsync();
+    setIsShareCardVisible(true);
+    shareBackdropOpacity.setValue(0);
+    shareSheetOpacity.setValue(0);
+    shareSheetTranslateY.setValue(44);
+
+    Animated.parallel([
+      Animated.timing(shareBackdropOpacity, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.parallel([
+        Animated.timing(shareSheetOpacity, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shareSheetTranslateY, {
+          toValue: 0,
+          duration: 260,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [
+    latestResult,
+    shareBackdropOpacity,
+    shareSheetOpacity,
+    shareSheetTranslateY,
+  ]);
+
+  const closeShareCard = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(shareBackdropOpacity, {
+        toValue: 0,
+        duration: 180,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.parallel([
+        Animated.timing(shareSheetOpacity, {
+          toValue: 0,
+          duration: 160,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shareSheetTranslateY, {
+          toValue: 36,
+          duration: 200,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(({ finished }) => {
+      if (finished) {
+        setIsShareCardVisible(false);
+      }
+    });
+  }, [shareBackdropOpacity, shareSheetOpacity, shareSheetTranslateY]);
+
+  const handleCopyShareText = useCallback(async () => {
+    if (!latestResult) {
+      return;
+    }
+
+    try {
+      await Clipboard.setStringAsync(formatShareText(latestResult));
+      setInfo("Reply copied. Ready to paste anywhere.");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      closeShareCard();
+    } catch (clipboardError) {
+      console.error(clipboardError);
+      Alert.alert("Copy issue", "Could not copy that reply.");
+    }
+  }, [closeShareCard, latestResult]);
+
+  const handleShareToApps = useCallback(async () => {
     if (!latestResult) {
       return;
     }
@@ -312,11 +673,12 @@ export default function HomeScreen() {
       await Share.share({
         message: formatShareText(latestResult),
       });
+      closeShareCard();
     } catch (shareError) {
       console.error(shareError);
       Alert.alert("Share issue", "Could not open the share sheet.");
     }
-  }, [latestResult]);
+  }, [closeShareCard, latestResult]);
 
   const handleMicPress = useCallback(async () => {
     setError(null);
@@ -664,106 +1026,118 @@ export default function HomeScreen() {
               </View>
 
               {hasResult ? (
-                <>
+                <View
+                  style={{
+                    minHeight: 228,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 12,
+                    paddingTop: 18,
+                    paddingBottom: 28,
+                  }}
+                >
                   <Text
                     style={{
-                      fontSize: 24,
+                      fontSize: 28,
                       fontWeight: "800",
                       fontStyle: "italic",
                       color: theme.text1,
-                      lineHeight: 32,
-                      marginBottom: 12,
+                      lineHeight: 40,
+                      textAlign: "center",
+                      maxWidth: 250,
+                      marginBottom: 34,
                     }}
                   >
                     "{latestResult.catPhrase}"
-                  </Text>
-
-                  <Text
-                    style={{
-                      color: theme.text2,
-                      fontSize: 15,
-                      lineHeight: 22,
-                      marginBottom: 20,
-                    }}
-                  >
-                    {latestResult.interpretation}
                   </Text>
 
                   <View
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      gap: 3,
+                      gap: 4,
                       justifyContent: "center",
-                      marginBottom: 24,
-                      height: 40,
+                      height: 56,
                     }}
                   >
-                    {[1, 2, 3, 2, 4, 3, 1, 2, 5, 2, 1, 3, 2, 1].map(
-                      (val, i) => (
-                        <View
-                          key={i}
-                          style={{
-                            width: 4,
-                            height: val * 8,
-                            backgroundColor: "#FF8C00",
-                            borderRadius: 999,
-                            opacity: 0.7,
-                          }}
-                        />
-                      ),
-                    )}
+                    {visualizerLevels.map((val, i) => (
+                      <View
+                        key={i}
+                        style={{
+                          width: 5,
+                          height: val * 6,
+                          backgroundColor: "#FF8C00",
+                          borderRadius: 999,
+                          opacity: isVisualizerActive
+                            ? 0.28 + val * 0.08
+                            : 0.18 + val * 0.08,
+                        }}
+                      />
+                    ))}
                   </View>
-                </>
+                </View>
               ) : (
                 <View
                   style={{
-                    borderRadius: 24,
-                    backgroundColor: theme.orangeIconBg,
-                    paddingHorizontal: 22,
-                    paddingVertical: 28,
+                    minHeight: 228,
                     alignItems: "center",
-                    gap: 14,
-                    marginBottom: 20,
+                    justifyContent: "center",
+                    paddingHorizontal: 20,
+                    paddingTop: 18,
+                    paddingBottom: 28,
                   }}
                 >
-                  <View
+                  <Text
                     style={{
-                      width: 72,
-                      height: 72,
-                      borderRadius: 36,
-                      backgroundColor: theme.surface,
-                      alignItems: "center",
-                      justifyContent: "center",
+                      fontSize: 17,
+                      fontWeight: "700",
+                      color: theme.text2,
+                      textAlign: "center",
+                      marginBottom: 26,
+                      letterSpacing: 0.4,
                     }}
                   >
-                    <Waves color="#FF8C00" size={30} />
-                  </View>
+                    Waiting for your cat's reply
+                  </Text>
 
                   <Text
                     style={{
-                      fontSize: 20,
+                      fontSize: 30,
                       fontWeight: "800",
+                      fontStyle: "italic",
                       color: theme.text1,
                       textAlign: "center",
+                      lineHeight: 42,
+                      maxWidth: 240,
+                      marginBottom: 34,
                     }}
                   >
-                    Your first cat reading appears here
+                    "Mrow!
+                    {"\n"}Mrrrreow!"
                   </Text>
 
-                  <Text
+                  <View
                     style={{
-                      color: theme.text2,
-                      fontSize: 14,
-                      lineHeight: 22,
-                      textAlign: "center",
-                      maxWidth: 260,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                      justifyContent: "center",
+                      height: 56,
                     }}
                   >
-                    Type something dramatic or record a voice note. PawSpeak
-                    will return a mood, a cat phrase, and a funny read
-                    instantly.
-                  </Text>
+                    {[1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1].map((val, i) => (
+                      <View
+                        key={i}
+                        style={{
+                          width: 5,
+                          height: val * 6,
+                          backgroundColor: "#FF8C00",
+                          borderRadius: 999,
+                          opacity: 0.18 + val * 0.08,
+                        }}
+                      />
+                    ))}
+                  </View>
                 </View>
               )}
 
@@ -798,7 +1172,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={handleShare}
+                  onPress={openShareCard}
                   disabled={!latestResult}
                   style={{
                     padding: 12,
@@ -810,29 +1184,419 @@ export default function HomeScreen() {
                   <ShareIcon color={theme.iconBtnColor} size={20} />
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={handleSaveFavorite}
-                  disabled={!latestResult || saveMutation.isPending}
+                <View
                   style={{
-                    padding: 12,
-                    backgroundColor: currentIsSaved
-                      ? theme.iconBtnActive
-                      : theme.iconBtnBg,
-                    borderRadius: 999,
-                    opacity: latestResult ? 1 : 0.45,
+                    position: "relative",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  <Heart
-                    color={currentIsSaved ? "#FF8C00" : theme.iconBtnColor}
-                    fill={currentIsSaved ? "#FF8C00" : "transparent"}
-                    size={20}
+                  {LIKE_PARTICLES.map((particle, index) => (
+                    <Animated.View
+                      key={`${particle.x}-${particle.y}-${index}`}
+                      pointerEvents="none"
+                      style={{
+                        position: "absolute",
+                        width: particle.size,
+                        height: particle.size,
+                        borderRadius: 999,
+                        backgroundColor: particle.color,
+                        opacity: likeBurstProgress.interpolate({
+                          inputRange: [0, 0.08, 0.72, 1],
+                          outputRange: [0, 0.95, 0.6, 0],
+                        }),
+                        transform: [
+                          {
+                            translateX: likeBurstProgress.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, particle.x],
+                            }),
+                          },
+                          {
+                            translateY: likeBurstProgress.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, particle.y],
+                            }),
+                          },
+                          {
+                            scale: likeBurstProgress.interpolate({
+                              inputRange: [0, 0.25, 1],
+                              outputRange: [0.3, 1, 0.4],
+                            }),
+                          },
+                        ],
+                      }}
+                    />
+                  ))}
+
+                  <Animated.View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      bottom: 42,
+                      opacity: likeBadgeOpacity,
+                      transform: [
+                        { translateY: likeBadgeTranslateY },
+                        {
+                          scale: likeBadgeOpacity.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.88, 1],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <View
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderRadius: 999,
+                        backgroundColor: "#FF8C00",
+                        shadowColor: "#FF8C00",
+                        shadowOpacity: 0.3,
+                        shadowRadius: 10,
+                        shadowOffset: { width: 0, height: 6 },
+                        elevation: 6,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 12,
+                          fontWeight: "800",
+                        }}
+                      >
+                        Favorite added
+                      </Text>
+                    </View>
+                  </Animated.View>
+
+                  <Animated.View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      width: 66,
+                      height: 66,
+                      borderRadius: 999,
+                      backgroundColor: isDark
+                        ? "rgba(255, 140, 0, 0.14)"
+                        : "rgba(255, 140, 0, 0.12)",
+                      opacity: likeBurstProgress.interpolate({
+                        inputRange: [0, 0.2, 0.9, 1],
+                        outputRange: [0, 0.8, 0.18, 0],
+                      }),
+                      transform: [
+                        {
+                          scale: likeBurstProgress.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.45, 1.55],
+                          }),
+                        },
+                      ],
+                    }}
                   />
-                </TouchableOpacity>
+
+                  <Animated.View
+                    style={{
+                      transform: [{ scale: likeButtonScale }],
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={handleSaveFavorite}
+                      disabled={!latestResult || saveMutation.isPending}
+                      style={{
+                        padding: 12,
+                        backgroundColor: currentIsSaved
+                          ? theme.iconBtnActive
+                          : theme.iconBtnBg,
+                        borderRadius: 999,
+                        opacity: latestResult ? 1 : 0.45,
+                      }}
+                    >
+                      <Heart
+                        color={currentIsSaved ? "#FF8C00" : theme.iconBtnColor}
+                        fill={currentIsSaved ? "#FF8C00" : "transparent"}
+                        size={20}
+                      />
+                    </TouchableOpacity>
+                  </Animated.View>
+                </View>
               </View>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingAnimatedView>
+
+      <Modal
+        transparent
+        visible={isShareCardVisible}
+        animationType="none"
+        onRequestClose={closeShareCard}
+      >
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Pressable
+            onPress={closeShareCard}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+            }}
+          >
+            <Animated.View
+              style={{
+                flex: 1,
+                backgroundColor: "#000000",
+                opacity: shareBackdropOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.48],
+                }),
+              }}
+            />
+          </Pressable>
+
+          <Animated.View
+            style={{
+              paddingHorizontal: 16,
+              paddingBottom: insets.bottom + 18,
+              opacity: shareSheetOpacity,
+              transform: [{ translateY: shareSheetTranslateY }],
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: theme.surface,
+                borderRadius: 30,
+                paddingHorizontal: 18,
+                paddingTop: 14,
+                paddingBottom: 18,
+                shadowColor: "#000",
+                shadowOpacity: isDark ? 0.35 : 0.16,
+                shadowRadius: 22,
+                shadowOffset: { width: 0, height: 14 },
+                elevation: 16,
+                borderWidth: 1,
+                borderColor: isDark ? "#2E2E2E" : "#EFEFEF",
+              }}
+            >
+              <View
+                style={{
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
+                <View
+                  style={{
+                    width: 48,
+                    height: 5,
+                    borderRadius: 999,
+                    backgroundColor: isDark ? "#3A3A3A" : "#E5E7EB",
+                    marginBottom: 16,
+                  }}
+                />
+                <Text
+                  style={{
+                    color: theme.text1,
+                    fontSize: 24,
+                    fontWeight: "800",
+                    marginBottom: 6,
+                  }}
+                >
+                  Share the cat reply
+                </Text>
+                <Text
+                  style={{
+                    color: theme.text2,
+                    fontSize: 14,
+                    textAlign: "center",
+                    maxWidth: 250,
+                    lineHeight: 20,
+                  }}
+                >
+                  Turn this moment into a polished post before it leaves the
+                  room.
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  borderRadius: 24,
+                  padding: 18,
+                  marginBottom: 16,
+                  backgroundColor: isDark ? "#171717" : "#FBFBFB",
+                  borderWidth: 1,
+                  borderColor: isDark ? "#2C2C2C" : "#F2F2F2",
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 18,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "800",
+                      letterSpacing: 1,
+                      color: theme.text2,
+                    }}
+                  >
+                    CAT TRANSLATE
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: theme.orangeIconBg,
+                      borderRadius: 999,
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#FF8C00",
+                        fontSize: 11,
+                        fontWeight: "800",
+                        letterSpacing: 0.6,
+                      }}
+                    >
+                      PAWSPEAK
+                    </Text>
+                  </View>
+                </View>
+
+                <Text
+                  style={{
+                    color: theme.text1,
+                    fontSize: 26,
+                    lineHeight: 36,
+                    fontStyle: "italic",
+                    fontWeight: "800",
+                    textAlign: "center",
+                    marginBottom: 18,
+                  }}
+                >
+                  "{latestResult?.catPhrase || "Mrrrow..."}"
+                </Text>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                    marginBottom: 16,
+                  }}
+                >
+                  {SHARE_PREVIEW_LEVELS.map((level, index) => (
+                    <View
+                      key={`${level}-${index}`}
+                      style={{
+                        width: 5,
+                        height: level * 4,
+                        borderRadius: 999,
+                        backgroundColor: "#FF8C00",
+                        opacity: 0.2 + level * 0.08,
+                      }}
+                    />
+                  ))}
+                </View>
+
+                {latestResult?.humanText ? (
+                  <Text
+                    style={{
+                      color: theme.text2,
+                      fontSize: 13,
+                      textAlign: "center",
+                      lineHeight: 20,
+                    }}
+                  >
+                    You said: {latestResult.humanText}
+                  </Text>
+                ) : null}
+              </View>
+
+              <TouchableOpacity
+                onPress={handleShareToApps}
+                style={{
+                  backgroundColor: "#FF8C00",
+                  borderRadius: 18,
+                  paddingVertical: 16,
+                  alignItems: "center",
+                  shadowColor: "#FF8C00",
+                  shadowOpacity: 0.28,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 8,
+                  marginBottom: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontSize: 16,
+                    fontWeight: "800",
+                  }}
+                >
+                  Share to apps
+                </Text>
+              </TouchableOpacity>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={handleCopyShareText}
+                  style={{
+                    flex: 1,
+                    backgroundColor: theme.iconBtnBg,
+                    borderRadius: 18,
+                    paddingVertical: 15,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: theme.text1,
+                      fontSize: 15,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Copy text
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={closeShareCard}
+                  style={{
+                    flex: 1,
+                    backgroundColor: theme.iconBtnBg,
+                    borderRadius: 18,
+                    paddingVertical: 15,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: theme.text2,
+                      fontSize: 15,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Not now
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }

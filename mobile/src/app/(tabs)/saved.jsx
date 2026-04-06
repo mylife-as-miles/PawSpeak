@@ -1,3 +1,4 @@
+import appFetch from "@/__create/fetch";
 import { listFavorites, removeFavorite } from "@/utils/pawspeakStorage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAudioPlayer } from "expo-audio";
@@ -88,7 +89,7 @@ export default function SavedScreen() {
 
   const speakMutation = useMutation({
     mutationFn: async (text) => {
-      const response = await fetch("/api/pawspeak/speak", {
+      const response = await appFetch("/api/pawspeak/speak", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

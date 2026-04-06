@@ -38,46 +38,99 @@ function detectMood(text) {
   return "Playful";
 }
 
+function detectReplyIntent(text) {
+  const normalizedText = text.toLowerCase();
+
+  if (/(feed|food|treat|hungry|snack|dinner|breakfast|eat)/.test(normalizedText)) {
+    return "food";
+  }
+
+  if (/(love|miss|cuddle|hug|kiss|pet|snuggle|good cat|cute cat)/.test(normalizedText)) {
+    return "affection";
+  }
+
+  if (/(play|toy|laser|chase|zoom|catch)/.test(normalizedText)) {
+    return "play";
+  }
+
+  if (/(sorry|apolog|forgive)/.test(normalizedText)) {
+    return "apology";
+  }
+
+  if (/(leave|bye|goodbye|going out|see you later|be back)/.test(normalizedText)) {
+    return "departure";
+  }
+
+  if (/(bad cat|no|stop|don't|dont|quit|why did you)/.test(normalizedText)) {
+    return "scolding";
+  }
+
+  if (/(open|door|window|outside|inside|let me in|let me out)/.test(normalizedText)) {
+    return "door";
+  }
+
+  if (/\?/.test(normalizedText)) {
+    return "question";
+  }
+
+  return "general";
+}
+
 function buildFallback(text) {
   const mood = detectMood(text);
+  const intent = detectReplyIntent(text);
   const map = {
-    Loving: {
-      phrase: "mrrrp… prrr… mew",
-      line: "The cat version is clingy in a cool way: affection first, dignity later.",
-      emoji: "🤍",
+    food: {
+      phrase: "Mraow? Prrt-prrt? Mew?",
+      line: "Direct cat translation: asking about food with extremely serious bowl energy.",
     },
-    Playful: {
-      phrase: "brrt! mrrrow? prrp!",
-      line: "Translation: playful nonsense, delivered with suspicious confidence.",
-      emoji: "✨",
+    affection: {
+      phrase: "Prrr... mrrrp... mew.",
+      line: "Direct cat translation: affectionate and soft, with just enough dignity.",
     },
-    Angry: {
-      phrase: "hrrr. tsk. mEOW.",
-      line: "Translation: the whiskers are judging, and the case against you is strong.",
-      emoji: "😾",
+    play: {
+      phrase: "Brrt? Prrp-prrp! Mrrrow?",
+      line: "Direct cat translation: playful excitement with very obvious zoomie potential.",
     },
-    Sad: {
-      phrase: "mew… mrr…",
-      line: "Translation: dramatic tiny heartbreak with soft paws and perfect timing.",
-      emoji: "☁️",
+    apology: {
+      phrase: "Mew... prrt... mrrp.",
+      line: "Direct cat translation: a hesitant apology with hopeful little-paw energy.",
     },
-    Hungry: {
-      phrase: "mraow. mraow. now.",
-      line: "Translation: this is not a request. This is a menu review in progress.",
-      emoji: "🍣",
+    departure: {
+      phrase: "Mew... mrrrow... mew.",
+      line: "Direct cat translation: sad farewell drama, performed with commitment.",
     },
-    Chaotic: {
-      phrase: "prrt?! brrmrow! sksk—mew!",
-      line: "Translation: absolutely no plan, but the energy is unforgettable.",
-      emoji: "🌀",
+    scolding: {
+      phrase: "Hrrm! Mrow. Tsk-tsk.",
+      line: "Direct cat translation: sharp judgment, very pointed whisker punctuation.",
+    },
+    door: {
+      phrase: "Mrrrow? Prrt! Mraow?",
+      line: "Direct cat translation: urgent door politics with immediate emotional stakes.",
+    },
+    question: {
+      phrase: "Mrr? Prrt? Mew-mew?",
+      line: "Direct cat translation: clearly a question, delivered with feline confidence.",
+    },
+    general: {
+      phrase: "Mrrp... mrow... prrt.",
+      line: "Direct cat translation: the same message, now rendered in polished feline drama.",
     },
   };
 
-  const chosen = map[mood];
+  const moodEmojis = {
+    Loving: "🤍",
+    Playful: "✨",
+    Angry: "😾",
+    Sad: "☁️",
+    Hungry: "🍣",
+    Chaotic: "🌀",
+  };
+  const chosen = map[intent] || map.general;
 
   return {
     mood,
-    emoji: chosen.emoji,
+    emoji: moodEmojis[mood] || "🐾",
     catPhrase: chosen.phrase,
     interpretation: chosen.line,
     disclaimer: "Not a scientific cat translator. Just elite feline vibes.",
@@ -86,17 +139,29 @@ function buildFallback(text) {
 
 function buildPrompt(text) {
   return [
-    "You are PawSpeak, a playful premium cat-expression generator for a hackathon demo.",
+    "You are PawSpeak, a premium cat-language translator.",
+    "The human message is being spoken to a cat.",
+    "Translate the human message directly into cat language.",
+    "Preserve the original meaning, tone, sentence type, and emotional intent.",
+    "Do not answer the human message. Do not invent the cat's reply.",
+    "Treat this like translating English to another language, except the target language is cat.",
     "Analyze the human message and produce the full app result in one pass.",
     `Use exactly one mood from this list: ${moods.join(", ")}.`,
     "Return valid JSON only. Do not use markdown fences.",
     "The JSON object must include these keys: mood, emoji, catPhrase, interpretation, disclaimer.",
     "Rules:",
-    '- catPhrase should be a short cat-style sound string like \"mrrp… prrrt… mew\"',
-    "- interpretation should be one funny sentence under 120 characters",
+    '- catPhrase must be the translated version of the human message in cat sounds only, like "mrrp... prrrt... mew."',
+    "- catPhrase should preserve whether the original is a question, statement, greeting, apology, complaint, or affection",
+    "- keep the same general sentence energy and punctuation style when possible",
+    "- do not include English words inside catPhrase",
+    "- interpretation should explain the translation in plain English in one funny sentence under 120 characters",
     "- disclaimer should clearly say this is not scientific",
     "- keep it charming, polished, and instantly understandable",
     "- emoji should fit the chosen mood",
+    "Examples:",
+    'Human: "Do you want breakfast?" -> catPhrase should feel like a cat-language version of that exact question.',
+    'Human: "I missed you all day." -> catPhrase should feel like a cat-language version of that affectionate statement.',
+    'Human: "Why did you knock that over?" -> catPhrase should feel like a cat-language version of that complaint/question.',
     `Human message: ${text}`,
   ].join("\n");
 }
