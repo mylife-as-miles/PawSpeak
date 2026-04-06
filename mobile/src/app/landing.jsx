@@ -44,6 +44,38 @@ const onboardingOptions = [
   },
 ];
 
+const goalOptions = [
+  {
+    id: "understand",
+    label: "Understand my cat better",
+    icon: "\u{1F43E}",
+  },
+  {
+    id: "translate",
+    label: "Turn my words into meows",
+    icon: "\u{1F4AC}",
+  },
+  {
+    id: "save",
+    label: "Save favorite translations",
+    icon: "\u2728",
+  },
+];
+
+const focusOptions = [
+  "Hungry meows",
+  "Purring",
+  "Morning chats",
+  "Playtime",
+  "Zoomies",
+  "Cuddles",
+  "Greetings",
+  "Mood swings",
+  "Attention",
+  "Sleepy sounds",
+  "Other",
+];
+
 function OptionIcon({ option }) {
   if (option.iconType === "emoji") {
     return (
@@ -69,8 +101,28 @@ export default function LandingScreen() {
   const [screen, setScreen] = useState("intro");
   const [selectedOption, setSelectedOption] = useState(onboardingOptions[0].id);
   const [talkFrequency, setTalkFrequency] = useState(4);
+  const [selectedGoals, setSelectedGoals] = useState(["understand", "translate"]);
+  const [selectedFocus, setSelectedFocus] = useState(["Hungry meows", "Purring"]);
   const isIntro = screen === "intro";
   const isSourceScreen = screen === "onboarding";
+  const isFrequencyScreen = screen === "frequency";
+  const isGoalsScreen = screen === "goals";
+
+  function toggleGoal(goalId) {
+    setSelectedGoals((current) =>
+      current.includes(goalId)
+        ? current.filter((item) => item !== goalId)
+        : [...current, goalId]
+    );
+  }
+
+  function toggleFocus(label) {
+    setSelectedFocus((current) =>
+      current.includes(label)
+        ? current.filter((item) => item !== label)
+        : [...current, label]
+    );
+  }
 
   const colors = {
     heroBg: isDark ? "#121212" : "#F8F9FA",
@@ -106,7 +158,9 @@ export default function LandingScreen() {
     >
       <StatusBar style={isDark ? "light" : "dark"} />
 
-      {isIntro ? (
+      {(() => {
+        if (isIntro) {
+          return (
         <View
           style={{
             width: "100%",
@@ -232,7 +286,11 @@ export default function LandingScreen() {
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-      ) : isSourceScreen ? (
+          );
+        }
+
+        if (isSourceScreen) {
+          return (
         <View
           style={{
             width: "100%",
@@ -272,7 +330,7 @@ export default function LandingScreen() {
             >
               <View
                 style={{
-                  width: "33%",
+                  width: "25%",
                   height: "100%",
                   borderRadius: 999,
                   backgroundColor: colors.accent,
@@ -382,7 +440,11 @@ export default function LandingScreen() {
             />
           </TouchableOpacity>
         </View>
-      ) : (
+          );
+        }
+
+        if (isFrequencyScreen) {
+          return (
         <View
           style={{
             width: "100%",
@@ -423,7 +485,7 @@ export default function LandingScreen() {
             >
               <View
                 style={{
-                  width: "66%",
+                  width: "50%",
                   height: "100%",
                   borderRadius: 999,
                   backgroundColor: colors.accent,
@@ -558,7 +620,7 @@ export default function LandingScreen() {
 
             <TouchableOpacity
               activeOpacity={0.92}
-              onPress={() => router.replace("/(tabs)/home")}
+              onPress={() => setScreen("goals")}
               style={{
                 marginTop: 28,
                 alignSelf: "center",
@@ -590,7 +652,479 @@ export default function LandingScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      )}
+          );
+        }
+
+        if (isGoalsScreen) {
+          return (
+            <View
+              style={{
+                width: "100%",
+                maxWidth: 430,
+                alignSelf: "center",
+                minHeight: 820,
+              }}
+            >
+              <View
+                style={{
+                  marginTop: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 14,
+                }}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setScreen("frequency")}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="chevron-back" size={24} color={colors.text} />
+                </TouchableOpacity>
+
+                <View
+                  style={{
+                    flex: 1,
+                    height: 4,
+                    borderRadius: 999,
+                    backgroundColor: colors.progressTrack,
+                    overflow: "hidden",
+                  }}
+                >
+                  <View
+                    style={{
+                      width: "75%",
+                      height: "100%",
+                      borderRadius: 999,
+                      backgroundColor: colors.accent,
+                    }}
+                  />
+                </View>
+              </View>
+
+              <View
+                style={{
+                  marginTop: 42,
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                }}
+              >
+                <View
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 36,
+                    backgroundColor: colors.card,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: 22,
+                    marginRight: -16,
+                    zIndex: 2,
+                  }}
+                >
+                  <Image
+                    source="https://ucarecdn.com/d261e341-7dc4-4fdb-9bac-37a4d58bc0c0/-/format/auto/"
+                    contentFit="contain"
+                    style={{
+                      width: 64,
+                      height: 64,
+                    }}
+                  />
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.card,
+                    borderRadius: 34,
+                    paddingVertical: 28,
+                    paddingHorizontal: 28,
+                    overflow: "visible",
+                  }}
+                >
+                  <View
+                    style={{
+                      position: "absolute",
+                      left: -11,
+                      top: 52,
+                      width: 28,
+                      height: 28,
+                      backgroundColor: colors.card,
+                      transform: [{ rotate: "45deg" }],
+                      borderRadius: 8,
+                    }}
+                  />
+                  <View
+                    style={{
+                      position: "absolute",
+                      left: -3,
+                      top: 38,
+                      width: 26,
+                      height: 42,
+                      borderTopLeftRadius: 18,
+                      borderBottomLeftRadius: 18,
+                      backgroundColor: colors.card,
+                    }}
+                  />
+
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: 30,
+                      lineHeight: 36,
+                      fontWeight: "900",
+                    }}
+                  >
+                    What do you want PawSpeak to help with most?
+                  </Text>
+                </View>
+              </View>
+
+              <View
+                style={{
+                  marginTop: 96,
+                  gap: 22,
+                }}
+              >
+                {goalOptions.map((option) => {
+                  const isSelected = selectedGoals.includes(option.id);
+
+                  return (
+                    <TouchableOpacity
+                      key={option.id}
+                      activeOpacity={0.9}
+                      onPress={() => toggleGoal(option.id)}
+                      style={{
+                        minHeight: 108,
+                        borderRadius: 30,
+                        backgroundColor: isSelected ? colors.accentSoft : colors.card,
+                        borderWidth: isSelected ? 2 : 0,
+                        borderColor: isSelected ? colors.accentBorder : "transparent",
+                        paddingHorizontal: 24,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 20,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: 20,
+                          backgroundColor: isSelected ? colors.card : colors.onboardingBg,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 32,
+                            lineHeight: 36,
+                          }}
+                        >
+                          {option.icon}
+                        </Text>
+                      </View>
+
+                      <Text
+                        style={{
+                          flex: 1,
+                          color: colors.text,
+                          fontSize: 22,
+                          lineHeight: 28,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {option.label}
+                      </Text>
+
+                      <Ionicons
+                        name={isSelected ? "checkmark-circle" : "ellipse"}
+                        size={36}
+                        color={
+                          isSelected
+                            ? colors.accent
+                            : isDark
+                              ? "rgba(245, 245, 245, 0.12)"
+                              : "rgba(30, 28, 32, 0.10)"
+                        }
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.92}
+                onPress={() => setScreen("window")}
+                style={{
+                  marginTop: 84,
+                  alignSelf: "center",
+                  minWidth: 220,
+                  borderRadius: 999,
+                  backgroundColor: colors.button,
+                  paddingVertical: 22,
+                  paddingHorizontal: 34,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.buttonText,
+                    fontSize: 22,
+                    fontWeight: "800",
+                  }}
+                >
+                  Next
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color={colors.buttonText}
+                />
+              </TouchableOpacity>
+            </View>
+          );
+        }
+
+        return (
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 430,
+              alignSelf: "center",
+              minHeight: 860,
+            }}
+          >
+            <View
+              style={{
+                marginTop: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setScreen("goals")}
+                style={{
+                  width: 28,
+                  height: 28,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="chevron-back" size={24} color={colors.text} />
+              </TouchableOpacity>
+
+              <View
+                style={{
+                  flex: 1,
+                  height: 4,
+                  borderRadius: 999,
+                  backgroundColor: colors.progressTrack,
+                  overflow: "hidden",
+                }}
+              >
+                <View
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: 999,
+                    backgroundColor: colors.accent,
+                  }}
+                />
+              </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 42,
+                flexDirection: "row",
+                alignItems: "flex-start",
+              }}
+            >
+              <View
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 36,
+                  backgroundColor: colors.card,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: 22,
+                  marginRight: -16,
+                  zIndex: 2,
+                }}
+              >
+                <Image
+                  source="https://ucarecdn.com/d261e341-7dc4-4fdb-9bac-37a4d58bc0c0/-/format/auto/"
+                  contentFit="contain"
+                  style={{
+                    width: 64,
+                    height: 64,
+                  }}
+                />
+              </View>
+
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.card,
+                  borderRadius: 34,
+                  paddingVertical: 28,
+                  paddingHorizontal: 28,
+                  overflow: "visible",
+                }}
+              >
+                <View
+                  style={{
+                    position: "absolute",
+                    left: -11,
+                    top: 52,
+                    width: 28,
+                    height: 28,
+                    backgroundColor: colors.card,
+                    transform: [{ rotate: "45deg" }],
+                    borderRadius: 8,
+                  }}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    left: -3,
+                    top: 38,
+                    width: 26,
+                    height: 42,
+                    borderTopLeftRadius: 18,
+                    borderBottomLeftRadius: 18,
+                    backgroundColor: colors.card,
+                  }}
+                />
+
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 30,
+                    lineHeight: 36,
+                    fontWeight: "900",
+                  }}
+                >
+                  What kinds of cat moments should PawSpeak help with?
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 92,
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: 14,
+                paddingHorizontal: 8,
+              }}
+            >
+              {focusOptions.map((label) => {
+                const isSelected = selectedFocus.includes(label);
+                const isOther = label === "Other";
+
+                return (
+                  <TouchableOpacity
+                    key={label}
+                    activeOpacity={0.9}
+                    onPress={() => toggleFocus(label)}
+                    style={{
+                      minHeight: 70,
+                      borderRadius: 26,
+                      backgroundColor: colors.card,
+                      paddingVertical: 18,
+                      paddingHorizontal: isOther ? 24 : 20,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      borderWidth: isSelected ? 2 : 0,
+                      borderColor: isSelected ? colors.accentBorder : "transparent",
+                    }}
+                  >
+                    {isOther ? (
+                      <Ionicons
+                        name="add"
+                        size={22}
+                        color={colors.text}
+                        style={{ marginRight: 2 }}
+                      />
+                    ) : (
+                      <Ionicons
+                        name={isSelected ? "ellipse" : "ellipse-outline"}
+                        size={14}
+                        color={
+                          isSelected
+                            ? colors.accent
+                            : isDark
+                              ? "rgba(245, 245, 245, 0.16)"
+                              : "rgba(30, 28, 32, 0.10)"
+                        }
+                      />
+                    )}
+
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontSize: 18,
+                        lineHeight: 24,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.92}
+              onPress={() => router.replace("/(tabs)/home")}
+              style={{
+                marginTop: 96,
+                alignSelf: "center",
+                minWidth: 260,
+                borderRadius: 999,
+                backgroundColor: colors.button,
+                paddingVertical: 22,
+                paddingHorizontal: 34,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              <Ionicons
+                name="checkmark"
+                size={28}
+                color={colors.buttonText}
+              />
+              <Text
+                style={{
+                  color: colors.buttonText,
+                  fontSize: 22,
+                  fontWeight: "800",
+                }}
+              >
+                Help with everything
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
     </ScrollView>
   );
 }
