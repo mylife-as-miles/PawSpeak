@@ -441,14 +441,14 @@ export default function LandingScreen() {
           >
             <View
               style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: colors.orangeIconBg,
+                width: 72,
+                height: 72,
+                borderRadius: 36,
+                backgroundColor: colors.card,
                 alignItems: "center",
                 justifyContent: "center",
-                marginTop: 18,
-                marginRight: -12,
+                marginTop: 22,
+                marginRight: -16,
                 zIndex: 2,
               }}
             >
@@ -456,8 +456,8 @@ export default function LandingScreen() {
                 source="https://ucarecdn.com/d261e341-7dc4-4fdb-9bac-37a4d58bc0c0/-/format/auto/"
                 contentFit="contain"
                 style={{
-                  width: 58,
-                  height: 58,
+                  width: 64,
+                  height: 64,
                 }}
               />
             </View>
@@ -466,22 +466,34 @@ export default function LandingScreen() {
               style={{
                 flex: 1,
                 backgroundColor: colors.card,
-                borderRadius: 32,
+                borderRadius: 34,
                 paddingVertical: 28,
-                paddingHorizontal: 26,
+                paddingHorizontal: 28,
                 overflow: "visible",
               }}
             >
               <View
                 style={{
                   position: "absolute",
-                  left: -8,
-                  top: 44,
-                  width: 24,
-                  height: 24,
+                  left: -11,
+                  top: 52,
+                  width: 28,
+                  height: 28,
                   backgroundColor: colors.card,
                   transform: [{ rotate: "45deg" }],
-                  borderBottomLeftRadius: 10,
+                  borderRadius: 8,
+                }}
+              />
+              <View
+                style={{
+                  position: "absolute",
+                  left: -3,
+                  top: 38,
+                  width: 26,
+                  height: 42,
+                  borderTopLeftRadius: 18,
+                  borderBottomLeftRadius: 18,
+                  backgroundColor: colors.card,
                 }}
               />
 
