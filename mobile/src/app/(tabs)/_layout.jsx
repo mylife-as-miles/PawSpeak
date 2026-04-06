@@ -153,18 +153,7 @@ function PremiumTabBar({ state, descriptors, navigation, insets, isDark }) {
                 height: 1,
                 backgroundColor: shellEdge,
               }}
-            >
-              <View
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  height: 1,
-                  backgroundColor: shellEdge,
-                }}
-              />
-            </View>
+            />
 
             {activePlateWidth > 0 ? (
               <Animated.View
