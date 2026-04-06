@@ -1087,17 +1087,38 @@ export default function HomeScreen() {
                     paddingBottom: 28,
                   }}
                 >
+                  <View
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      borderRadius: 999,
+                      backgroundColor: theme.iconBtnBg,
+                      marginBottom: 18,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "800",
+                        color: "#FF8C00",
+                        letterSpacing: 1,
+                      }}
+                    >
+                      EMPTY PREVIEW
+                    </Text>
+                  </View>
+
                   <Text
                     style={{
                       fontSize: 17,
                       fontWeight: "700",
                       color: theme.text2,
                       textAlign: "center",
-                      marginBottom: 26,
+                      marginBottom: 18,
                       letterSpacing: 0.4,
                     }}
                   >
-                    Waiting for your cat's reply
+                    Your cat translation will land here
                   </Text>
 
                   <Text
@@ -1138,6 +1159,20 @@ export default function HomeScreen() {
                       />
                     ))}
                   </View>
+
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: theme.text2,
+                      textAlign: "center",
+                      lineHeight: 20,
+                      maxWidth: 240,
+                      marginTop: 18,
+                    }}
+                  >
+                    Translate a message and this preview becomes a real cat
+                    phrase with playable audio.
+                  </Text>
                 </View>
               )}
 
