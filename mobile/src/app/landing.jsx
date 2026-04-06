@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
 import { useAppTheme } from "@/utils/themeStore";
 
 const onboardingOptions = [
@@ -83,6 +84,7 @@ const paceOptions = [
     label: "Slow",
     value: "2",
     unit: "weeks",
+    goalDays: 14,
     summaryTitle: "Ease into it over about 2 weeks",
     summaryBody:
       "A slower rhythm keeps things light while PawSpeak learns your cat's habits with you.",
@@ -92,6 +94,7 @@ const paceOptions = [
     label: "Optimal",
     value: "1",
     unit: "week",
+    goalDays: 7,
     summaryTitle: "Feel more in sync in about 1 week",
     summaryBody:
       "This balanced pace gives PawSpeak enough daily moments to spot patterns without feeling intense.",
@@ -101,10 +104,26 @@ const paceOptions = [
     label: "Fast",
     value: "3",
     unit: "days",
+    goalDays: 3,
     summaryTitle: "Build momentum in about 3 days",
     summaryBody:
       "A faster pace works best if you want quick wins and plan to chat with your cat often.",
   },
+];
+
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 function OptionIcon({ option }) {
@@ -126,6 +145,10 @@ function OptionIcon({ option }) {
   );
 }
 
+function formatPlanDate(date) {
+  return `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 export default function LandingScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useAppTheme();
@@ -141,6 +164,7 @@ export default function LandingScreen() {
   const isGoalsScreen = screen === "goals";
   const isFocusScreen = screen === "window";
   const isPaceScreen = screen === "pace";
+  const isPlanScreen = screen === "plan";
 
   const selectedPaceConfig =
     paceOptions.find((option) => option.id === selectedPace) || paceOptions[1];
@@ -148,6 +172,10 @@ export default function LandingScreen() {
     (option) => option.id === selectedPace
   );
   const selectedPaceValue = selectedPaceIndex < 0 ? 1 : selectedPaceIndex;
+  const planGoalDate = new Date();
+  planGoalDate.setDate(planGoalDate.getDate() + (selectedPaceConfig.goalDays || 7));
+  const formattedPlanDate = formatPlanDate(planGoalDate);
+  const visibleResultsText = `${selectedPaceConfig.value} ${selectedPaceConfig.unit}`;
 
   function toggleGoal(goalId) {
     setSelectedGoals((current) =>
@@ -180,6 +208,10 @@ export default function LandingScreen() {
     surface: isDark ? "#1E1E1E" : "#FFFFFF",
     orangeIconBg: isDark ? "#3A2411" : "#FFF7ED",
     border: isDark ? "#2C2C2C" : "#ECE9F4",
+    planBg: isDark ? "#17140F" : "#FFF9F0",
+    planGrid: isDark ? "rgba(245, 245, 245, 0.10)" : "#E8E2D8",
+    planArea: isDark ? "#2A2015" : "#FFF1DA",
+    planMuted: isDark ? "#C6BDAF" : "#AAA29B",
   };
 
   return (
@@ -187,7 +219,11 @@ export default function LandingScreen() {
       contentInsetAdjustmentBehavior="automatic"
       style={{
         flex: 1,
-        backgroundColor: isIntro ? colors.heroBg : colors.onboardingBg,
+        backgroundColor: isIntro
+          ? colors.heroBg
+          : isPlanScreen
+            ? colors.planBg
+            : colors.onboardingBg,
       }}
       contentContainerStyle={{
         flexGrow: 1,
@@ -1299,7 +1335,7 @@ export default function LandingScreen() {
 
             <View
               style={{
-                marginTop: 92,
+                marginTop: 68,
                 alignItems: "center",
               }}
             >
@@ -1447,7 +1483,7 @@ export default function LandingScreen() {
 
             <TouchableOpacity
               activeOpacity={0.92}
-              onPress={() => router.replace("/(tabs)/home")}
+              onPress={() => setScreen("plan")}
               style={{
                 marginTop: 132,
                 alignSelf: "center",
@@ -1478,6 +1514,355 @@ export default function LandingScreen() {
               />
             </TouchableOpacity>
           </View>
+          );
+        }
+
+        if (isPlanScreen) {
+          return (
+            <View
+              style={{
+                width: "100%",
+                maxWidth: 430,
+                alignSelf: "center",
+                minHeight: 940,
+                paddingTop: 8,
+              }}
+            >
+              {[
+                { top: 26, left: 188, width: 22, height: 44, color: "#F8C728", rotate: "6deg" },
+                { top: 66, left: 64, width: 22, height: 42, color: "#FF6A57", rotate: "-28deg" },
+                { top: 112, right: -4, width: 24, height: 44, color: "#FF7258", rotate: "58deg" },
+                { top: 244, left: -10, width: 24, height: 44, color: "#F6C82A", rotate: "-74deg" },
+                { top: 530, left: 16, width: 24, height: 44, color: "#4EBD60", rotate: "42deg" },
+                { top: 514, right: -2, width: 24, height: 44, color: "#3D8DFF", rotate: "-62deg" },
+              ].map((piece, index) => (
+                <View
+                  key={index}
+                  style={{
+                    position: "absolute",
+                    top: piece.top,
+                    left: piece.left,
+                    right: piece.right,
+                    width: piece.width,
+                    height: piece.height,
+                    borderRadius: 999,
+                    backgroundColor: piece.color,
+                    transform: [{ rotate: piece.rotate }],
+                    opacity: isDark ? 0.9 : 1,
+                  }}
+                />
+              ))}
+
+              <View
+                style={{
+                  marginTop: 112,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.planMuted,
+                    fontSize: 18,
+                    lineHeight: 24,
+                    fontWeight: "700",
+                    textAlign: "center",
+                    marginBottom: 14,
+                  }}
+                >
+                  Your PawSpeak plan is ready
+                </Text>
+
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 58,
+                    lineHeight: 58,
+                    fontWeight: "900",
+                    textAlign: "center",
+                  }}
+                >
+                  Understand
+                </Text>
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 58,
+                    lineHeight: 58,
+                    fontWeight: "900",
+                    textAlign: "center",
+                  }}
+                >
+                  your cat by
+                </Text>
+                <Text
+                  style={{
+                    color: colors.accent,
+                    fontSize: 54,
+                    lineHeight: 58,
+                    fontWeight: "900",
+                    textAlign: "center",
+                    marginTop: 4,
+                  }}
+                >
+                  {formattedPlanDate}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  marginTop: 96,
+                  backgroundColor: colors.card,
+                  borderRadius: 36,
+                  paddingTop: 28,
+                  paddingBottom: 30,
+                  paddingHorizontal: 22,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 28,
+                    lineHeight: 34,
+                    fontWeight: "900",
+                  }}
+                >
+                  Projected progress
+                </Text>
+
+                <View
+                  style={{
+                    marginTop: 26,
+                    height: 340,
+                    position: "relative",
+                  }}
+                >
+                  <Svg width="100%" height="100%" viewBox="0 0 340 260">
+                    <Line
+                      x1="30"
+                      y1="60"
+                      x2="314"
+                      y2="60"
+                      stroke={colors.planGrid}
+                      strokeWidth="2"
+                      strokeDasharray="6 8"
+                    />
+                    <Line
+                      x1="30"
+                      y1="124"
+                      x2="314"
+                      y2="124"
+                      stroke={colors.planGrid}
+                      strokeWidth="2"
+                      strokeDasharray="6 8"
+                    />
+                    <Line
+                      x1="30"
+                      y1="180"
+                      x2="314"
+                      y2="180"
+                      stroke={colors.planGrid}
+                      strokeWidth="2"
+                      strokeDasharray="6 8"
+                    />
+                    <Line
+                      x1="30"
+                      y1="58"
+                      x2="30"
+                      y2="212"
+                      stroke={colors.planGrid}
+                      strokeWidth="2"
+                    />
+                    <Rect
+                      x="174"
+                      y="178"
+                      width="140"
+                      height="62"
+                      fill={colors.planArea}
+                    />
+                    <Path
+                      d="M 30 60 C 92 58, 120 138, 176 178 S 248 178, 314 178"
+                      fill="none"
+                      stroke={colors.accent}
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                    />
+                    <Circle
+                      cx="30"
+                      cy="60"
+                      r="12"
+                      fill={colors.card}
+                      stroke={colors.accent}
+                      strokeWidth="8"
+                    />
+                    <Circle
+                      cx="174"
+                      cy="178"
+                      r="12"
+                      fill={colors.card}
+                      stroke={colors.accent}
+                      strokeWidth="8"
+                    />
+                  </Svg>
+
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 10,
+                      backgroundColor: isDark ? "#26211D" : "#F2EDE7",
+                      borderRadius: 18,
+                      paddingVertical: 10,
+                      paddingHorizontal: 18,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontSize: 18,
+                        fontWeight: "900",
+                      }}
+                    >
+                      Today
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 126,
+                      left: "50%",
+                      transform: [{ translateX: -54 }],
+                      backgroundColor: colors.accent,
+                      borderRadius: 18,
+                      paddingVertical: 12,
+                      paddingHorizontal: 18,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontSize: 18,
+                        fontWeight: "900",
+                      }}
+                    >
+                      In sync
+                    </Text>
+                  </View>
+
+                  <Text
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      bottom: 8,
+                      color: colors.planMuted,
+                      fontSize: 16,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Today
+                  </Text>
+
+                  <Text
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      bottom: 8,
+                      color: colors.text,
+                      fontSize: 18,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {formattedPlanDate}
+                  </Text>
+
+                  <Text
+                    style={{
+                      position: "absolute",
+                      right: 22,
+                      top: 214,
+                      color: colors.accent,
+                      fontSize: 18,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Maintain rhythm
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    marginTop: 12,
+                    gap: 20,
+                  }}
+                >
+                  {[
+                    `See your first clear patterns in just ${visibleResultsText}`,
+                    `Reach your understanding goal by ${formattedPlanDate}`,
+                    "Daily check-ins help PawSpeak learn your cat faster",
+                  ].map((item) => (
+                    <View
+                      key={item}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 14,
+                      }}
+                    >
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={28}
+                        color={colors.accent}
+                        style={{ marginTop: 2 }}
+                      />
+                      <Text
+                        style={{
+                          flex: 1,
+                          color: colors.text,
+                          fontSize: 18,
+                          lineHeight: 28,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {item}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.92}
+                onPress={() => router.replace("/(tabs)/home")}
+                style={{
+                  marginTop: 38,
+                  alignSelf: "center",
+                  minWidth: 280,
+                  borderRadius: 999,
+                  backgroundColor: colors.button,
+                  paddingVertical: 22,
+                  paddingHorizontal: 34,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 12,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.buttonText,
+                    fontSize: 22,
+                    fontWeight: "800",
+                  }}
+                >
+                  Commit to my plan
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color={colors.buttonText}
+                />
+              </TouchableOpacity>
+            </View>
           );
         }
 
