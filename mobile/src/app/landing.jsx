@@ -68,7 +68,9 @@ export default function LandingScreen() {
   const { isDark } = useAppTheme();
   const [screen, setScreen] = useState("intro");
   const [selectedOption, setSelectedOption] = useState(onboardingOptions[0].id);
+  const [talkFrequency, setTalkFrequency] = useState(4);
   const isIntro = screen === "intro";
+  const isSourceScreen = screen === "onboarding";
 
   const colors = {
     heroBg: isDark ? "#121212" : "#F8F9FA",
@@ -115,19 +117,21 @@ export default function LandingScreen() {
         >
           <View
             style={{
-              width: 260,
-              height: 220,
+              width: "100%",
+              maxWidth: 390,
+              height: 360,
               alignItems: "center",
               justifyContent: "center",
-              marginBottom: 8,
+              marginBottom: -18,
             }}
           >
             <Image
               source="https://ucarecdn.com/d261e341-7dc4-4fdb-9bac-37a4d58bc0c0/-/format/auto/"
-              contentFit="cover"
+              contentFit="contain"
               style={{
-                width: 260,
-                height: 220,
+                width: "165%",
+                height: "165%",
+                transform: [{ translateY: 12 }],
               }}
             />
           </View>
@@ -228,7 +232,7 @@ export default function LandingScreen() {
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-      ) : (
+      ) : isSourceScreen ? (
         <View
           style={{
             width: "100%",
@@ -347,7 +351,7 @@ export default function LandingScreen() {
 
           <TouchableOpacity
             activeOpacity={0.92}
-            onPress={() => router.replace("/(tabs)/home")}
+            onPress={() => setScreen("frequency")}
             style={{
               marginTop: 38,
               alignSelf: "center",
@@ -377,6 +381,202 @@ export default function LandingScreen() {
               color={colors.buttonText}
             />
           </TouchableOpacity>
+        </View>
+      ) : (
+        <View
+          style={{
+            width: "100%",
+            maxWidth: 430,
+            alignSelf: "center",
+            minHeight: 820,
+          }}
+        >
+          <View
+            style={{
+              marginTop: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+            }}
+          >
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setScreen("onboarding")}
+              style={{
+                width: 28,
+                height: 28,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+
+            <View
+              style={{
+                flex: 1,
+                height: 4,
+                borderRadius: 999,
+                backgroundColor: colors.progressTrack,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  width: "66%",
+                  height: "100%",
+                  borderRadius: 999,
+                  backgroundColor: colors.accent,
+                }}
+              />
+            </View>
+          </View>
+
+          <View
+            style={{
+              marginTop: 42,
+              flexDirection: "row",
+              alignItems: "flex-start",
+            }}
+          >
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: colors.orangeIconBg,
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: 18,
+                marginRight: -12,
+                zIndex: 2,
+              }}
+            >
+              <Image
+                source="https://ucarecdn.com/d261e341-7dc4-4fdb-9bac-37a4d58bc0c0/-/format/auto/"
+                contentFit="contain"
+                style={{
+                  width: 58,
+                  height: 58,
+                }}
+              />
+            </View>
+
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: colors.card,
+                borderRadius: 32,
+                paddingVertical: 28,
+                paddingHorizontal: 26,
+                overflow: "visible",
+              }}
+            >
+              <View
+                style={{
+                  position: "absolute",
+                  left: -8,
+                  top: 44,
+                  width: 24,
+                  height: 24,
+                  backgroundColor: colors.card,
+                  transform: [{ rotate: "45deg" }],
+                  borderBottomLeftRadius: 10,
+                }}
+              />
+
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 30,
+                  lineHeight: 36,
+                  fontWeight: "900",
+                }}
+              >
+                How many times a day do you usually talk to your cat?
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={{
+              marginTop: 46,
+              flex: 1,
+              justifyContent: "space-between",
+            }}
+          >
+            <View
+              style={{
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              {[1, 2, 3, 4, 5].map((value) => {
+                const isSelected = talkFrequency === value;
+
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    activeOpacity={0.85}
+                    onPress={() => setTalkFrequency(value)}
+                    style={{
+                      paddingVertical: isSelected ? 2 : 0,
+                      paddingHorizontal: 20,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: isSelected
+                          ? colors.text
+                          : isDark
+                            ? "rgba(245, 245, 245, 0.18)"
+                            : "rgba(30, 28, 32, 0.14)",
+                        fontSize: isSelected ? 86 : 62,
+                        lineHeight: isSelected ? 92 : 68,
+                        fontWeight: isSelected ? "900" : "800",
+                        textAlign: "center",
+                      }}
+                    >
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.92}
+              onPress={() => router.replace("/(tabs)/home")}
+              style={{
+                marginTop: 28,
+                alignSelf: "center",
+                minWidth: 220,
+                borderRadius: 999,
+                backgroundColor: colors.button,
+                paddingVertical: 22,
+                paddingHorizontal: 34,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.buttonText,
+                  fontSize: 22,
+                  fontWeight: "800",
+                }}
+              >
+                Next
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={24}
+                color={colors.buttonText}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </ScrollView>
