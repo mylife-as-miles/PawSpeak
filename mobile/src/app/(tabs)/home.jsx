@@ -13,6 +13,7 @@ import {
   useAudioRecorderState,
 } from "expo-audio";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -43,6 +44,8 @@ import {
 
 const DEFAULT_VISUALIZER_LEVELS = [1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1];
 const SHARE_PREVIEW_LEVELS = [1, 2, 4, 5, 7, 9, 7, 5, 4, 2, 1];
+const HEADER_ICON_URL =
+  "https://ucarecdn.com/d261e341-7dc4-4fdb-9bac-37a4d58bc0c0/-/format/auto/";
 const LIKE_PARTICLES = [
   { x: -34, y: -34, size: 10, color: "#FFB84D" },
   { x: -18, y: -58, size: 8, color: "#FFD27D" },
