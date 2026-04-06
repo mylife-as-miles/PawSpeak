@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import Slider from "@react-native-community/slider";
 import { Image } from "expo-image";
 import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
@@ -76,6 +77,36 @@ const focusOptions = [
   "Other",
 ];
 
+const paceOptions = [
+  {
+    id: "slow",
+    label: "Slow",
+    value: "2",
+    unit: "weeks",
+    summaryTitle: "Ease into it over about 2 weeks",
+    summaryBody:
+      "A slower rhythm keeps things light while PawSpeak learns your cat's habits with you.",
+  },
+  {
+    id: "optimal",
+    label: "Optimal",
+    value: "1",
+    unit: "week",
+    summaryTitle: "Feel more in sync in about 1 week",
+    summaryBody:
+      "This balanced pace gives PawSpeak enough daily moments to spot patterns without feeling intense.",
+  },
+  {
+    id: "fast",
+    label: "Fast",
+    value: "3",
+    unit: "days",
+    summaryTitle: "Build momentum in about 3 days",
+    summaryBody:
+      "A faster pace works best if you want quick wins and plan to chat with your cat often.",
+  },
+];
+
 function OptionIcon({ option }) {
   if (option.iconType === "emoji") {
     return (
@@ -103,10 +134,20 @@ export default function LandingScreen() {
   const [talkFrequency, setTalkFrequency] = useState(4);
   const [selectedGoals, setSelectedGoals] = useState(["understand", "translate"]);
   const [selectedFocus, setSelectedFocus] = useState(["Hungry meows", "Purring"]);
+  const [selectedPace, setSelectedPace] = useState("optimal");
   const isIntro = screen === "intro";
   const isSourceScreen = screen === "onboarding";
   const isFrequencyScreen = screen === "frequency";
   const isGoalsScreen = screen === "goals";
+  const isFocusScreen = screen === "window";
+  const isPaceScreen = screen === "pace";
+
+  const selectedPaceConfig =
+    paceOptions.find((option) => option.id === selectedPace) || paceOptions[1];
+  const selectedPaceIndex = paceOptions.findIndex(
+    (option) => option.id === selectedPace
+  );
+  const selectedPaceValue = selectedPaceIndex < 0 ? 1 : selectedPaceIndex;
 
   function toggleGoal(goalId) {
     setSelectedGoals((current) =>
@@ -330,7 +371,7 @@ export default function LandingScreen() {
             >
               <View
                 style={{
-                  width: "25%",
+                  width: "20%",
                   height: "100%",
                   borderRadius: 999,
                   backgroundColor: colors.accent,
@@ -485,7 +526,7 @@ export default function LandingScreen() {
             >
               <View
                 style={{
-                  width: "50%",
+                  width: "40%",
                   height: "100%",
                   borderRadius: 999,
                   backgroundColor: colors.accent,
@@ -697,7 +738,7 @@ export default function LandingScreen() {
                 >
                   <View
                     style={{
-                      width: "75%",
+                      width: "60%",
                       height: "100%",
                       borderRadius: 999,
                       backgroundColor: colors.accent,
@@ -894,7 +935,8 @@ export default function LandingScreen() {
           );
         }
 
-        return (
+        if (isFocusScreen) {
+          return (
           <View
             style={{
               width: "100%",
@@ -933,12 +975,12 @@ export default function LandingScreen() {
                   overflow: "hidden",
                 }}
               >
-                <View
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    borderRadius: 999,
-                    backgroundColor: colors.accent,
+                  <View
+                    style={{
+                      width: "80%",
+                      height: "100%",
+                      borderRadius: 999,
+                      backgroundColor: colors.accent,
                   }}
                 />
               </View>
@@ -1090,13 +1132,326 @@ export default function LandingScreen() {
               })}
             </View>
 
+              <TouchableOpacity
+                activeOpacity={0.92}
+                onPress={() => setScreen("pace")}
+                style={{
+                  marginTop: 96,
+                  alignSelf: "center",
+                minWidth: 260,
+                borderRadius: 999,
+                backgroundColor: colors.button,
+                paddingVertical: 22,
+                paddingHorizontal: 34,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                }}
+              >
+                <Ionicons
+                  name="checkmark"
+                  size={28}
+                  color={colors.buttonText}
+                />
+                <Text
+                  style={{
+                    color: colors.buttonText,
+                    fontSize: 22,
+                    fontWeight: "800",
+                  }}
+                >
+                  Help with everything
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }
+
+        if (isPaceScreen) {
+          return (
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 430,
+              alignSelf: "center",
+              minHeight: 860,
+            }}
+          >
+            <View
+              style={{
+                marginTop: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setScreen("window")}
+                style={{
+                  width: 28,
+                  height: 28,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="chevron-back" size={24} color={colors.text} />
+              </TouchableOpacity>
+
+              <View
+                style={{
+                  flex: 1,
+                  height: 4,
+                  borderRadius: 999,
+                  backgroundColor: colors.progressTrack,
+                  overflow: "hidden",
+                }}
+              >
+                <View
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: 999,
+                    backgroundColor: colors.accent,
+                  }}
+                />
+              </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 42,
+                flexDirection: "row",
+                alignItems: "flex-start",
+              }}
+            >
+              <View
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 36,
+                  backgroundColor: colors.card,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: 22,
+                  marginRight: -16,
+                  zIndex: 2,
+                }}
+              >
+                <Image
+                  source="https://ucarecdn.com/d261e341-7dc4-4fdb-9bac-37a4d58bc0c0/-/format/auto/"
+                  contentFit="contain"
+                  style={{
+                    width: 64,
+                    height: 64,
+                  }}
+                />
+              </View>
+
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.card,
+                  borderRadius: 34,
+                  paddingVertical: 28,
+                  paddingHorizontal: 28,
+                  overflow: "visible",
+                }}
+              >
+                <View
+                  style={{
+                    position: "absolute",
+                    left: -11,
+                    top: 52,
+                    width: 28,
+                    height: 28,
+                    backgroundColor: colors.card,
+                    transform: [{ rotate: "45deg" }],
+                    borderRadius: 8,
+                  }}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    left: -3,
+                    top: 38,
+                    width: 26,
+                    height: 42,
+                    borderTopLeftRadius: 18,
+                    borderBottomLeftRadius: 18,
+                    backgroundColor: colors.card,
+                  }}
+                />
+
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 30,
+                    lineHeight: 36,
+                    fontWeight: "900",
+                  }}
+                >
+                  How fast do you want to understand your cat?
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 92,
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontSize: 18,
+                  lineHeight: 24,
+                  fontWeight: "700",
+                  marginBottom: 10,
+                }}
+              >
+                Understanding pace
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "flex-end",
+                  gap: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 92,
+                    lineHeight: 96,
+                    fontWeight: "900",
+                  }}
+                >
+                  {selectedPaceConfig.value}
+                </Text>
+                <Text
+                  style={{
+                    color: isDark
+                      ? "rgba(245, 245, 245, 0.18)"
+                      : "rgba(30, 28, 32, 0.16)",
+                    fontSize: 46,
+                    lineHeight: 54,
+                    fontWeight: "800",
+                    marginBottom: 8,
+                  }}
+                >
+                  {selectedPaceConfig.unit}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  marginTop: 52,
+                  width: "92%",
+                }}
+              >
+                {selectedPace === "optimal" ? (
+                  <View
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      top: -58,
+                      transform: [{ translateX: -78 }],
+                      alignItems: "center",
+                      zIndex: 2,
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: colors.accent,
+                        borderRadius: 16,
+                        paddingVertical: 10,
+                        paddingHorizontal: 16,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 18,
+                          fontWeight: "800",
+                        }}
+                      >
+                        Recommended
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        width: 16,
+                        height: 16,
+                        backgroundColor: colors.accent,
+                        transform: [{ rotate: "45deg" }, { translateY: -7 }],
+                        borderBottomRightRadius: 4,
+                      }}
+                    />
+                  </View>
+                ) : null}
+
+                <Slider
+                  value={selectedPaceValue}
+                  minimumValue={0}
+                  maximumValue={paceOptions.length - 1}
+                  step={1}
+                  minimumTrackTintColor={colors.accent}
+                  maximumTrackTintColor={colors.progressTrack}
+                  thumbTintColor="#FFFFFF"
+                  onValueChange={(value) =>
+                    setSelectedPace(paceOptions[Math.round(value)]?.id || "optimal")
+                  }
+                  style={{
+                    width: "100%",
+                    height: 44,
+                    transform: [{ scaleY: 1.35 }],
+                  }}
+                />
+
+                <View
+                  style={{
+                    marginTop: 8,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  {paceOptions.map((option) => {
+                    const isSelected = option.id === selectedPace;
+
+                    return (
+                      <TouchableOpacity
+                        key={option.id}
+                        activeOpacity={0.85}
+                        onPress={() => setSelectedPace(option.id)}
+                        style={{ minWidth: 82, alignItems: "center" }}
+                      >
+                        <Text
+                          style={{
+                            color: isSelected ? colors.text : colors.muted,
+                            fontSize: isSelected ? 18 : 17,
+                            fontWeight: isSelected ? "800" : "700",
+                          }}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+
             <TouchableOpacity
               activeOpacity={0.92}
               onPress={() => router.replace("/(tabs)/home")}
               style={{
-                marginTop: 96,
+                marginTop: 132,
                 alignSelf: "center",
-                minWidth: 260,
+                minWidth: 220,
                 borderRadius: 999,
                 backgroundColor: colors.button,
                 paddingVertical: 22,
@@ -1107,11 +1462,6 @@ export default function LandingScreen() {
                 gap: 10,
               }}
             >
-              <Ionicons
-                name="checkmark"
-                size={28}
-                color={colors.buttonText}
-              />
               <Text
                 style={{
                   color: colors.buttonText,
@@ -1119,11 +1469,19 @@ export default function LandingScreen() {
                   fontWeight: "800",
                 }}
               >
-                Help with everything
+                Next
               </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={24}
+                color={colors.buttonText}
+              />
             </TouchableOpacity>
           </View>
-        );
+          );
+        }
+
+        return null;
       })()}
     </ScrollView>
   );
