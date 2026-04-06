@@ -126,11 +126,6 @@ function PremiumTabBar({ state, descriptors, navigation, insets, isDark }) {
             width: "92%",
             maxWidth: 372,
             height: 56,
-            borderRadius: 999,
-            backgroundColor: shellColor,
-            borderWidth: 1,
-            borderColor: shellBorder,
-            overflow: "hidden",
             shadowColor: "#FF8C00",
             shadowOffset: { width: 0, height: 10 },
             shadowOpacity: isDark ? 0.22 : 0.12,
@@ -139,35 +134,24 @@ function PremiumTabBar({ state, descriptors, navigation, insets, isDark }) {
           }}
         >
           <View
-            pointerEvents="none"
             style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: 0,
-              height: 1,
-              backgroundColor: shellEdge,
+              flex: 1,
+              borderRadius: 999,
+              backgroundColor: shellColor,
+              borderWidth: 1,
+              borderColor: shellBorder,
+              overflow: "hidden",
             }}
-          />
-
-          {activePlateWidth > 0 ? (
-            <Animated.View
+          >
+            <View
               pointerEvents="none"
               style={{
                 position: "absolute",
-                top: 6,
-                left: activePlateStart,
-                width: activePlateWidth,
-                height: 44,
-                borderRadius: 14,
-                backgroundColor: activePlate,
-                borderWidth: 1,
-                borderColor: activePlateBorder,
-                shadowColor: "#FF8C00",
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: isDark ? 0.18 : 0.08,
-                shadowRadius: 14,
-                transform: [{ translateX }],
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 1,
+                backgroundColor: shellEdge,
               }}
             >
               <View
@@ -177,81 +161,113 @@ function PremiumTabBar({ state, descriptors, navigation, insets, isDark }) {
                   right: 0,
                   top: 0,
                   height: 1,
-                  backgroundColor: isDark
-                    ? "rgba(255,255,255,0.04)"
-                    : "rgba(255,255,255,0.7)",
+                  backgroundColor: shellEdge,
                 }}
               />
-            </Animated.View>
-          ) : null}
+            </View>
 
-          <View
-            style={{
-              flex: 1,
-              flexDirection: "row",
-              paddingHorizontal: barPadding,
-            }}
-          >
-            {state.routes.map((route, index) => {
-              const isFocused = state.index === index;
-              const config = TAB_CONFIG[route.name] || TAB_CONFIG.home;
-              const Icon = config.Icon;
-              const color = isFocused ? "#FF8C00" : inactiveTint;
-              const iconSize = 20;
+            {activePlateWidth > 0 ? (
+              <Animated.View
+                style={{
+                  position: "absolute",
+                  top: 6,
+                  left: activePlateStart,
+                  width: activePlateWidth,
+                  height: 44,
+                  borderRadius: 14,
+                  backgroundColor: activePlate,
+                  borderWidth: 1,
+                  borderColor: activePlateBorder,
+                  shadowColor: "#FF8C00",
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: isDark ? 0.18 : 0.08,
+                  shadowRadius: 14,
+                  transform: [{ translateX }],
+                }}
+              >
+                <View
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: 1,
+                    backgroundColor: isDark
+                      ? "rgba(255,255,255,0.04)"
+                      : "rgba(255,255,255,0.7)",
+                  }}
+                />
+              </Animated.View>
+            ) : null}
 
-              return (
-                <Pressable
-                  key={route.key}
-                  accessibilityRole="button"
-                  accessibilityState={isFocused ? { selected: true } : {}}
-                  accessibilityLabel={descriptors[route.key].options.title || config.title}
-                  onPress={() => handlePress(route, isFocused)}
-                  onLongPress={() =>
-                    navigation.emit({
-                      type: "tabLongPress",
-                      target: route.key,
-                    })
-                  }
-                  style={({ pressed }) => ({
-                    width: segmentWidth || undefined,
-                    flex: segmentWidth ? 0 : 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transform: [
-                      {
-                        scale:
-                          pressed && !reduceMotionEnabled
-                            ? 0.96
-                            : isFocused
-                              ? 1.02
-                              : 1,
-                      },
-                    ],
-                    opacity: pressed ? 0.9 : 1,
-                  })}
-                >
-                  <Animated.View
-                    style={{
+            <View
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                paddingHorizontal: barPadding,
+              }}
+            >
+              {state.routes.map((route, index) => {
+                const isFocused = state.index === index;
+                const config = TAB_CONFIG[route.name] || TAB_CONFIG.home;
+                const Icon = config.Icon;
+                const color = isFocused ? "#FF8C00" : inactiveTint;
+                const iconSize = 20;
+
+                return (
+                  <Pressable
+                    key={route.key}
+                    accessibilityRole="button"
+                    accessibilityState={isFocused ? { selected: true } : {}}
+                    accessibilityLabel={descriptors[route.key].options.title || config.title}
+                    onPress={() => handlePress(route, isFocused)}
+                    onLongPress={() =>
+                      navigation.emit({
+                        type: "tabLongPress",
+                        target: route.key,
+                      })
+                    }
+                    style={({ pressed }) => ({
+                      width: segmentWidth || undefined,
+                      flex: segmentWidth ? 0 : 1,
                       alignItems: "center",
                       justifyContent: "center",
                       transform: [
                         {
-                          translateY:
-                            isFocused && !reduceMotionEnabled ? -0.5 : 0,
+                          scale:
+                            pressed && !reduceMotionEnabled
+                              ? 0.96
+                              : isFocused
+                                ? 1.02
+                                : 1,
                         },
                       ],
-                    }}
+                      opacity: pressed ? 0.9 : 1,
+                    })}
                   >
-                    <Icon
-                      color={color}
-                      size={iconSize}
-                      strokeWidth={isFocused ? 2.3 : 2}
-                      absoluteStrokeWidth={Platform.OS === "web"}
-                    />
-                  </Animated.View>
-                </Pressable>
-              );
-            })}
+                    <Animated.View
+                      style={{
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transform: [
+                          {
+                            translateY:
+                              isFocused && !reduceMotionEnabled ? -0.5 : 0,
+                          },
+                        ],
+                      }}
+                    >
+                      <Icon
+                        color={color}
+                        size={iconSize}
+                        strokeWidth={isFocused ? 2.3 : 2}
+                        absoluteStrokeWidth={Platform.OS === "web"}
+                      />
+                    </Animated.View>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         </View>
       </View>
