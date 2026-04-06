@@ -115,26 +115,19 @@ export default function LandingScreen() {
         >
           <View
             style={{
-              width: 200,
-              height: 200,
-              backgroundColor: colors.orangeIconBg,
-              borderRadius: 100,
+              width: 260,
+              height: 220,
               alignItems: "center",
               justifyContent: "center",
-              marginBottom: 32,
-              shadowColor: colors.accent,
-              shadowOpacity: isDark ? 0.2 : 0.12,
-              shadowRadius: 30,
-              shadowOffset: { width: 0, height: 10 },
-              elevation: 10,
+              marginBottom: 8,
             }}
           >
             <Image
               source="https://ucarecdn.com/d261e341-7dc4-4fdb-9bac-37a4d58bc0c0/-/format/auto/"
-              contentFit="contain"
+              contentFit="cover"
               style={{
-                width: 118,
-                height: 118,
+                width: 260,
+                height: 220,
               }}
             />
           </View>
