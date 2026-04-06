@@ -158,6 +158,10 @@ export default function LandingScreen() {
   const [selectedGoals, setSelectedGoals] = useState(["understand", "translate"]);
   const [selectedFocus, setSelectedFocus] = useState(["Hungry meows", "Purring"]);
   const [selectedPace, setSelectedPace] = useState("optimal");
+  const [referenceDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  });
   const isIntro = screen === "intro";
   const isSourceScreen = screen === "onboarding";
   const isFrequencyScreen = screen === "frequency";
@@ -172,8 +176,10 @@ export default function LandingScreen() {
     (option) => option.id === selectedPace
   );
   const selectedPaceValue = selectedPaceIndex < 0 ? 1 : selectedPaceIndex;
-  const planGoalDate = new Date();
-  planGoalDate.setDate(planGoalDate.getDate() + (selectedPaceConfig.goalDays || 7));
+  const planGoalDate = new Date(referenceDate);
+  planGoalDate.setDate(
+    referenceDate.getDate() + (selectedPaceConfig.goalDays || 7)
+  );
   const formattedPlanDate = formatPlanDate(planGoalDate);
   const visibleResultsText = `${selectedPaceConfig.value} ${selectedPaceConfig.unit}`;
 
